@@ -1,0 +1,218 @@
+-- SERVICES
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+
+-- VARIABLES
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+local visitedPositions = {}
+local isActive = false
+local flySpeed = 25 
+local collected = 0
+local startTime = 0
+local antiAFK = false
+
+player.CharacterAdded:Connect(function(char)
+    character = char
+    rootPart = char:WaitForChild("HumanoidRootPart")
+    visitedPositions = {}
+end)
+
+-- SOUND
+local collectSound = Instance.new("Sound", rootPart)
+collectSound.SoundId = "rbxassetid://12221967"
+collectSound.Volume = 1
+
+-- GUI
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "ValentineAutoFarm"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 280, 0, 320)
+frame.Position = UDim2.new(0.5, -140, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(255, 105, 180) -- Hot Pink
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 15)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(255, 255, 255)
+stroke.Thickness = 3
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, -20, 0, 40)
+title.Position = UDim2.new(0, 10, 0, 5)
+title.Text = "❤️ MM2 Valentines Autofarm ❤️" -- Updated Title
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Center
+
+local credit = Instance.new("TextLabel", frame)
+credit.Size = UDim2.new(1, -20, 0, 20)
+credit.Position = UDim2.new(0, 10, 1, -25)
+credit.Text = "Youtube: Yukio Scripts"
+credit.TextColor3 = Color3.fromRGB(255, 240, 245)
+credit.BackgroundTransparency = 1
+credit.Font = Enum.Font.GothamBold
+credit.TextSize = 13
+credit.TextXAlignment = Enum.TextXAlignment.Center
+
+local hideBtn = Instance.new("TextButton", gui)
+hideBtn.Size = UDim2.new(0, 110, 0, 35)
+hideBtn.Position = UDim2.new(1, -120, 1, -45)
+hideBtn.Text = "Hide Menu 💌"
+hideBtn.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
+hideBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+hideBtn.Font = Enum.Font.GothamBold
+hideBtn.TextSize = 14
+Instance.new("UICorner", hideBtn).CornerRadius = UDim.new(0, 8)
+
+hideBtn.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
+    hideBtn.Text = frame.Visible and "Hide Menu 💌" or "Show Menu ❤️"
+end)
+
+local function makeButton(y, text)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(0, 240, 0, 32)
+    btn.Position = UDim2.new(0.5, -120, 0, y)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(255, 182, 193)
+    btn.TextColor3 = Color3.fromRGB(139, 0, 0)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    local bStroke = Instance.new("UIStroke", btn)
+    bStroke.Color = Color3.fromRGB(255, 255, 255)
+    bStroke.Thickness = 1
+    return btn
+end
+
+local function makeLabel(y, text)
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(0, 240, 0, 20)
+    lbl.Position = UDim2.new(0.5, -120, 0, y)
+    lbl.Text = text
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    return lbl
+end
+
+local toggleBtn = makeButton(50, "Auto Farm: OFF")
+local afkBtn = makeButton(90, "Anti-AFK: OFF")
+local speedBtn = makeButton(130, "Speed: 25")
+local counterLabel = makeLabel(175, "Collected: 0")
+local timerLabel = makeLabel(200, "Time: 0s")
+local rateLabel = makeLabel(225, "Coins/Hr: 0")
+local resetBtn = makeButton(255, "🌹 Reset Stats")
+
+-- NOCLIP LOGIC (Standard Standing)
+RunService.Stepped:Connect(function()
+    if isActive and character then
+        for _, v in ipairs(character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+end)
+
+resetBtn.MouseButton1Click:Connect(function()
+    collected = 0
+    startTime = tick()
+    counterLabel.Text = "Collected: 0"
+    timerLabel.Text = "Time: 0s"
+    rateLabel.Text = "Coins/Hr: 0"
+end)
+
+afkBtn.MouseButton1Click:Connect(function()
+    antiAFK = not antiAFK
+    afkBtn.Text = antiAFK and "Anti-AFK: ON" or "Anti-AFK: OFF"
+    afkBtn.BackgroundColor3 = antiAFK and Color3.fromRGB(255, 105, 180) or Color3.fromRGB(255, 182, 193)
+end)
+
+player.Idled:Connect(function()
+    if antiAFK then
+        VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    end
+end)
+
+speedBtn.MouseButton1Click:Connect(function()
+    flySpeed = flySpeed + 0
+    if flySpeed > 25 then flySpeed = 25 end
+    speedBtn.Text = "Speed: " .. flySpeed
+end)
+
+local function flyTo(pos, speed)
+    if not rootPart then return end
+    local distance = (pos - rootPart.Position).Magnitude
+    local duration = distance / speed
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local goal = {CFrame = CFrame.new(pos)}
+    local tween = TweenService:Create(rootPart, tweenInfo, goal)
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+    isActive = not isActive
+    toggleBtn.Text = isActive and "Auto Farm: ACTIVE" or "Auto Farm: OFF"
+    toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(220, 20, 60) or Color3.fromRGB(255, 182, 193)
+
+    if isActive then  
+        startTime = tick()  
+        
+        task.spawn(function()  
+            while isActive do  
+                local elapsed = tick() - startTime  
+                timerLabel.Text = "Time: " .. math.floor(elapsed) .. "s"  
+                local rate = elapsed > 0 and math.floor((collected / elapsed) * 3600) or 0  
+                rateLabel.Text = "Coins/Hr: " .. rate  
+                task.wait(0.5)  
+            end  
+        end)  
+
+        task.spawn(function()  
+            while isActive do  
+                character = player.Character or player.CharacterAdded:Wait()  
+                rootPart = character:FindFirstChild("HumanoidRootPart")  
+                if rootPart then  
+                    local closest, shortest = nil, math.huge  
+                    for _, obj in ipairs(workspace:GetDescendants()) do  
+                        -- Targeting both standard coins and event coins
+                        if obj:IsA("BasePart") and (obj.Name == "Coin_Server" or obj.Name == "ValentineCoin") then  
+                            local dist = (obj.Position - rootPart.Position).Magnitude  
+                            if dist < shortest and dist < 300 and not visitedPositions[obj] then  
+                                closest = obj  
+                                shortest = dist  
+                            end  
+                        end  
+                    end  
+
+                    if closest and closest.Parent then  
+                        flyTo(closest.Position, flySpeed)  
+                        visitedPositions[closest] = true  
+                        collected = collected + 1  
+                        collectSound:Play()  
+                        counterLabel.Text = "Collected: " .. collected  
+                    end  
+                end  
+                task.wait(0.1)  
+            end  
+        end)  
+    end
+end)
