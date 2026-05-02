@@ -1,0 +1,127 @@
+-- Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+-- ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BrainrotLoader"
+screenGui.ResetOnSpawn = false -- GUI persists on reset
+screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main Frame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 420, 0, 260)
+frame.Position = UDim2.new(0.5, -210, 0.5, -130)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.Parent = screenGui
+
+-- Rounded corners
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 20)
+corner.Parent = frame
+
+-- RGB Border
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 4
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Parent = frame
+
+-- RGB Animation
+local hue = 0
+RunService.RenderStepped:Connect(function()
+	hue = (hue + 0.003) % 1
+	local rgbColor = Color3.fromHSV(hue, 1, 1)
+	
+	stroke.Color = rgbColor
+	percentText.TextColor3 = rgbColor
+end)
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -20, 0, 45)
+title.Position = UDim2.new(0, 10, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "Loading Script"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBlack
+title.Parent = frame
+
+-- Subtitle
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -20, 0, 25)
+subtitle.Position = UDim2.new(0, 10, 0, 70)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "Please wait..."
+subtitle.TextColor3 = Color3.fromRGB(200,200,200)
+subtitle.TextScaled = true
+subtitle.Font = Enum.Font.GothamMedium
+subtitle.Parent = frame
+
+-- Percentage Text
+percentText = Instance.new("TextLabel")
+percentText.Size = UDim2.new(1, -20, 0, 50)
+percentText.Position = UDim2.new(0, 10, 0.42, -10)
+percentText.BackgroundTransparency = 1
+percentText.Text = "0%"
+percentText.TextScaled = true
+percentText.Font = Enum.Font.GothamBlack
+percentText.Parent = frame
+
+-- Progress Bar Background
+local barBG = Instance.new("Frame")
+barBG.Size = UDim2.new(1, -40, 0, 8)
+barBG.Position = UDim2.new(0, 20, 0.6, 0)
+barBG.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+barBG.BorderSizePixel = 0
+barBG.Parent = frame
+
+local barBGCorner = Instance.new("UICorner")
+barBGCorner.CornerRadius = UDim.new(1, 0)
+barBGCorner.Parent = barBG
+
+-- Progress Bar Fill
+local barFill = Instance.new("Frame")
+barFill.Size = UDim2.new(0, 0, 1, 0)
+barFill.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+barFill.BorderSizePixel = 0
+barFill.Parent = barBG
+
+local barCorner = Instance.new("UICorner")
+barCorner.CornerRadius = UDim.new(1, 0)
+barCorner.Parent = barFill
+
+-- Timer Text (RESTORED)
+local timerText = Instance.new("TextLabel")
+timerText.Size = UDim2.new(1, -20, 0, 30)
+timerText.Position = UDim2.new(0, 10, 0.7, 0)
+timerText.BackgroundTransparency = 1
+timerText.Text = "Time remaining: 60s"
+timerText.TextColor3 = Color3.fromRGB(180,180,180)
+timerText.TextScaled = true
+timerText.Font = Enum.Font.GothamMedium
+timerText.Parent = frame
+
+-- LOADING SYSTEM
+local totalTime = 60
+local steps = 100
+local stepTime = totalTime / steps
+
+for i = 1, steps do
+	local progress = i / steps
+	
+	percentText.Text = i .. "%"
+	timerText.Text = "Time remaining: " .. (totalTime - math.floor(i * stepTime)) .. "s"
+	
+	local tween = TweenService:Create(barFill, TweenInfo.new(stepTime, Enum.EasingStyle.Linear), {
+		Size = UDim2.new(progress, 0, 1, 0)
+	})
+	tween:Play()
+	
+	task.wait(stepTime)
+end
+
+-- Finished state
+timerText.Text = "Script Loaded"
+subtitle.Text = "Ready"
