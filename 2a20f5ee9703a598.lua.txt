@@ -1,7 +1,5 @@
 -- ts file was generated at discord.gg/25ms
 
-MINIMUM_VALUE = 5000
-
 if not getgenv().ImmortalHub then
     getgenv().ImmortalHub = true
 
